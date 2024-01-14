@@ -1,0 +1,108 @@
+create database ertevkurs
+use ertevkurs
+create table ogrenci(
+tcno varchar(11) primary key,
+ogrno int not null identity(1,1),
+ad nvarchar(20) not null,
+soyad nvarchar(20) not null,
+cinsiyet nvarchar(10) not null,
+dtarih date not null check(dtarih<'01.01.2005'),
+mail nvarchar(20) not null unique,
+tel nvarchar(20) not null unique default '0(555)5555555')
+--tabloya yeni kayıt ekleme
+insert into ogrenci values('12345678901','Emir Cihan','Alper','Erkek','01.01.1987','emir@gmail.com','0(555)1234567') 
+insert into ogrenci values('12345678903','Emir','Alper','Erkek','1987.01.01','emir2@gmail.com','0(555)1234568')
+select*from ogrenci
+
+create table ogretmen(
+tcno varchar(11) primary key,
+perno int not null identity(1,1),
+ad nvarchar(20) not null,
+soyad nvarchar(20) not null,
+mail nvarchar(20) not null unique,
+tel nvarchar(20) not null unique default '0(555)5555555',
+brans nvarchar(30) not null default 'meslek dersi')
+
+insert into ogretmen (tcno,ad,soyad,mail,tel,brans) values 
+('12345678902','Ali','Alper','ali@gmail.com','0(555)1234567','web tasarım')
+select *  from ogretmen
+
+create table ders(
+dersno int primary key identity (1,1),
+ad nvarchar(20) not null)
+
+insert into ders values ('Yazılım Uzmanlığı')
+select * from ders
+--insert te ilk 2 keresinde hatalı girdiğimiz için identity 3 ten başladı
+
+create table ogrenciders(
+sno int primary key identity,
+ogrtc varchar(11) foreign key references ogrenci(tcno),
+dno int foreign key references ders(dersno),
+gun varchar(15) not null,
+saat tinyint not null,
+yer varchar(30))
+
+insert into ogrenciders values ('12345678901',3,'cuma',8,'Lab2')
+select * from ogrenciders
+
+create table ogretmenders(
+sno int primary key identity,
+ogretmentc varchar(11) foreign key references ogretmen(tcno),
+dno int foreign key references ders(dersno),
+gun varchar(15) not null,
+saat tinyint not null,
+yer varchar(30))
+
+insert into ogretmenders values('12345678902',3,'salı',8,'Lab5')
+select * from ogretmenders
+--
+
+use NORTHWND
+-- tüm siparişler
+select * from Orders
+--Kayıt Sayısı
+select count(*) as 'Sipariş Kayıt Sayısı' from Orders --tüm kayıt sayısını çıkartır
+select count(orders.ShipRegion) from orders --dolu kayıt sayısı çıkartır
+--ŞARTA UYAN KAYITLAR
+--employeeid alanı 5 ve üzeri olan siparişler
+select *from orders where EmployeeID>=5
+--france ve lyon dan verilen siparişler
+select * from orders where ShipCountry='France' and ShipCity='Lyon'
+--customerid alanı r ile başlayan siparişler
+select * from orders where CustomerID like 'r%'
+--siparişleri employeeid ye göre sırala
+select * from orders order by EmployeeID
+
+--BOTTM customerid li müşterinin adını, soyadını, sipariş tarihini, siparişi hazırlayan çalışan adı soyadı
+select Customers.ContactName,orders.OrderDate,Employees.FirstName,Employees.LastName from Customers,orders,Employees
+where customers.CustomerID=orders.CustomerID and orders.EmployeeID=Employees.EmployeeID and customers.CustomerID='BOTTM'
+
+--çalışanın adı soyadı ve hangi bölgede(territory) çalıştığını listeleyin
+select Employees.FirstName,Employees.LastName,Territories.TerritoryDescription from Employees,EmployeeTerritories,Territories
+where Employees.EmployeeID=EmployeeTerritories.EmployeeID and EmployeeTerritories.TerritoryID=Territories.TerritoryID
+--
+
+use ertevkurs
+select*from ogrenciders
+select * from ogrenci
+select * from ders
+select *from ogretmen
+select * from ogretmenders
+insert into ders values ('sanallaştırma')
+insert into ogrenciders values ('12345678901',4,'çarşamba',8,'Lab8')
+insert into ogretmen values ('12345678909','Murat','Çatmalı','murat@gmail.com','0(555)98765432','bilişim')
+insert into ogretmenders values ('12345678909',5,'çarşamba',8,'LAb7')
+insert into ogretmenders values ('12345678909',4,'salı',8,'LAb7')
+insert into ogretmenders values ('12345678909',3,'pazartesi',8,'LAb7')
+insert into ders values ('SQL')
+
+--hangi öğrenci hangi dersleri alıyor (öğrenci ad, soyad, ders adı)
+select ogrenci.ad,ogrenci.soyad,ders.ad from ogrenci,ogrenciders,ders
+where ogrenci.tcno=ogrenciders.ogrtc and ogrenciders.dno=ders.dersno
+
+--murat çatmalı öğretmenin verdiği tüm dersleri (adları) listeleme
+select ogretmen.ad,ogretmen.soyad,ders.ad from ogretmen,ogretmenders,ders
+where ogretmen.tcno=ogretmenders.ogretmentc and ogretmenders.dno=ders.dersno and ogretmen.ad='Murat' and ogretmen.soyad='Çatmalı'
+--
+
