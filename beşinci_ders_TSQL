@@ -1,0 +1,127 @@
+--TSQL
+--Değişken Tanımlama
+declare @sayi int --sayi isimli bir int değer tanımlama
+set @sayi=5	--sayi ya değer verdik
+print @sayi --ekrana yazdırdık
+declare @adsoyad nvarchar(50)='Baha Can'
+print @adsoyad
+use KUTUPHANE
+select count(*) from Uyeler
+declare @adet int
+set @adet=(select count(*) from Uyeler)
+print 'üyeler tablosunda '+trim(str(@adet))+ ' adet üye vardır'
+print concat('Üyeler tablosunda ',trim(str(@adet)),' adet üye vardır') --concat string ifadeleri birleştirir
+--If Yapısı
+if 5>4 begin print '1.sayı büyüktür' end else begin print 'diğer sayı büyüktür' end --parantez yerine begin ve end kullanıyoruz
+declare @deger int=9
+if @deger%2=0 print 'Çift Sayı' else print 'Tek Sayı'
+--Soru: içinde bulunduğumuz yılın tek mi çift mi olduğunu veren sql
+if year(getdate())%2=0 print 'Çift Yıl' else print 'Tek Yıl'
+--soru: Kütüphanemizde 5 ile 10 arasında kitap varsa yeterli, 10 dan çok ise mükemmel, 5 ten az ise yetersiz kitap sayısı mesajı versin
+if (select count(*) from Kitap)<5 print 'yetersiz kitap' else if (select count(*) from Kitap)>10 print 'mükemmel' else print 'yeterli'
+--soru:vize ve final notu klavyeden girerek ortalamayı (%40 vize, %60final) hesaplayacak harf notu elde edecek 
+--(0-50 FF, 51-60 CC, 61-75 BB, 76-84 BA, 85-100 AA) final notu 60 ve üzeri ortalaması 55 üzeri olanlara başarılı diğerlerine başarısız
+declare @vize float = 80
+declare @final float = 50
+declare @sonuc float = (@vize*0.4)+(@final*0.6)
+if @final>=60 and @sonuc>=55 
+begin
+	if @sonuc>=51 and @sonuc<61 print concat('ortalamanız ',trim(str(@sonuc)),' ile CC Başarılı')
+	else if @sonuc>=61 and @sonuc<76 print concat('ortalamanız ',trim(str(@sonuc)),' ile BB Başarılı')
+	else if @sonuc>=76 and @sonuc<85 print concat('ortalamanız ',trim(str(@sonuc)),' ile BA Başarılı')
+	else print concat('ortalamanız ',trim(str(@sonuc)),' AA ile Başarılı')
+end
+else 
+	print concat('ortalamanız ',trim(str(@sonuc)),' ile FF Başarısız')
+---------------------Hocanın Cevabı
+declare @vize float=70, @final float =60
+declare @ort float, @harfnotu nvarchar(2)
+set @ort=@vize*0.4+@final*0.6
+if @ort<=50 set @harfnotu='FF'
+else if @ort>50 and @ort<=60 set @harfnotu='CC'
+else if @ort>60 and @ort<=75 set @harfnotu='BB'
+else if @ort>75 and @ort<=84 set @harfnotu='BA'
+else if @ort>84 and @ort<=100 set @harfnotu='AA'
+if @final>=60 and @ort>=55
+print concat ('Ortalama= ',trim(str(@ort)),', Harf Notu= ',@harfnotu,', Durumu= BAŞARILI') 
+else 
+print concat ('Ortalama= ',trim(str(@ort)),', Harf Notu= ',@harfnotu,', Durumu= BAŞARISIZ') 
+----------------------------
+--Dünya klasikleri türündeki kitapları listeleyen sordu
+select Kategori_Adi,K_Adi as KitapAdı from Kategori,Kitap where Kategori.Kategori_No=kitap.Kategori_id and Kategori_adi='Dünya Klasikleri'
+--Arama kriterine göre sonuç yoktur veya kayıt listelesin
+declare @sayi int
+declare @tur nvarchar(30) ='Tarih'
+set @sayi= (select count(*) from Kategori,Kitap where Kategori.Kategori_No=kitap.Kategori_id and Kategori_adi=@tur)
+if @sayi=0 print 'Bu kategoride kitap yoktur'
+else select Kategori_Adi,K_Adi as KitapAdı from Kategori,Kitap where Kategori.Kategori_No=kitap.Kategori_id and Kategori_adi=@tur
+--kategori tablosuna kontröllü olarak kayıt ekleyen sql sorgusu
+--örnek: 107 nolu masal türünde kayıt ekleme işlemini kontrollü olarak yapınız
+declare @katno int =108
+declare @kat_adi nvarchar(30)='Masal'
+if (select count(*) from Kategori where Kategori_No=@katno or Kategori_adi=@kat_adi)=0
+begin
+insert into Kategori values (@katno,@kat_adi)
+select*from Kategori
+end
+else print 'Bu kayıt Mevcuttur'
+--If Exists - If Not Exists
+declare @kno int = 107
+if exists (select * from KAtegori where Kategori_No=@kno) --içeriyorsa!
+select * from KAtegori where Kategori_No=@kno
+else print 'Bu kayıt mevcut değildir'
+declare @kno int = 117
+if not exists (select * from KAtegori where Kategori_No=@kno)
+print 'Bu kayıt mevcut değildir'
+else select * from KAtegori where Kategori_No=@kno
+--Yazar tablosunda if not exists kontrol yapısını kullanarak İlber Ortaylı yazarını yoksa ekleyen varsa mesaj veren soru
+declare @yazarad nvarchar(30)='İlber'
+declare @yazarsoyad nvarchar(30)='Ortaylı'
+if not exists(select * from Yazar where Yazar_Ad=@yazarad and Yazar_Soyad=@yazarsoyad)
+begin
+	insert into Yazar values (@yazarad,@yazarsoyad)
+	select*from Yazar
+end
+else print 'Aynı isimde bir yazar mevcuttur'
+--Case When 
+--soru: stok miktarı 10dan küçükse yetersiz, 10-30 arası ise idare eder, 30dan fazla ise yeterli stok mesajını veren sql
+declare @stok int=45
+select @stok as StokMiktarı,
+case
+when @stok>0 and @stok<10 then 'Yetersiz Stok'
+when @stok>=10 and @stok<=30 then 'İdare Eder'
+when @stok>30 then 'Yeterli Stok'
+else 'Hatalı Veri'
+end
+as Durumu
+----------------------------
+alter table Uyeler add Puan int 
+--üyelerin adını, soyadını puan durumuna göre: 1 cezalı, 2 normal, 3 gümüş, 4 platin, 5 gold
+select U_adi, U_soyadi, 
+case 
+when puan=1 then 'Cezalı'
+when puan=2 then 'Normal'
+when puan=3 then 'Gümüş'
+when puan=4 then 'Platin'
+when puan=5 then 'Altın'
+else 'Puan Yok' end as Durumu
+from Uyeler
+--------------------------------------
+--Döngü Yapıları
+--1 ile 10 arasındaki sayıları ekrana yazan sorgu
+declare @sayac int=1
+while @sayac<=10
+begin
+print @sayac
+set @sayac+=1 
+end
+--soru: 0-100 arasındak itek sayıları yazdıran sorguyu tablo halinde yazma
+create table #sayilar(sayi int) --# ile geçici tablo oluşturuluyor
+declare @no int=0
+while @no<=100
+begin
+if @no%2=1 insert into #sayilar values(@no)
+set @no+=1
+end
+select*from #sayilar
+--
