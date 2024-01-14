@@ -1,0 +1,154 @@
+--SQL Kodlarını script dosyaları içine yaıyoruz.
+--DDL (Data Defination Language) Create, Delete, Drop, Alter
+--DML (Data Manipulation Language) Select, Update, Delete, Insert
+use NORTHWND
+--Tüm müşterileri listeleme için select
+select * from Customers
+--istenen alanları listeleme için select
+select contactname,phone,fax from customers
+--tüm ürünleri listeleme
+select * from products
+--tüm ürünlerin product name ve category id bilgilerini listeleme
+select productname,categoryid from Products
+select * from Categories
+--istenen şarta uyan kayıtları listeleme:
+--category id si 5 olan ürünleri listeleme
+select * from Products where CategoryID=5
+--birim ücreti 20 ve üzeri olan ürünler
+select * from products where UnitPrice>=20
+--adı tofu olan ürünü listele
+select * from Products where ProductName='tofu'
+--México D.F. de olmayan müşterileri listele
+select * from Customers where City<>'México D.F.'
+--birim fiyatı 50 ile 100 arası olan ürünlerin adı ve category id listeleme (farklı gösterimler)
+select CategoryID, ProductName, UnitPrice from Products where UnitPrice between 50 and 100
+select Products.ProductName, Products.CategoryID from Products where Products.UnitPrice between 50 and 100
+select CategoryID, ProductName, UnitPrice from Products where UnitPrice>=50 and UnitPrice<=100
+--M ile başlayan şehirden olan müşteriler
+select * from Customers where City like 'm%'
+--contactname "th" ile biten müşteri listesi
+select * from Customers where ContactName like '%th'
+--ülkesinin adında "n" harfi geçen müşteriler
+select * from Customers where Country like '%n%'
+--adının 3. harfi "r" olan müşteriler
+select * from Customers where ContactName like '__r%'
+--companyname alanı "b" "t" "y" harflerinden biri like başlayan müşteriler
+select * from Customers where CompanyName like '[bty]%'
+--
+
+use NORTHWND
+select * from Orders --tüm siparişleri listele
+select Orders.customerid, orderdate, orders.RequiredDate from Orders --sipariş içindeki bazı alanları listele
+select * from orders where shipvia=2
+--customerid si "o" ile başlayanlar listesi
+select * from orders where CustomerID like 'o%'
+--customerid si "ol" ile başlayıp "o" ile bitenler listesi
+select * from orders where CustomerID like 'ol%o'
+--customer id si "o" "y" "t" harfleri ile başlayan sipariş listesi
+select * from Orders where CustomerID like '[oyt]%'
+--employee id si 3 ile 5 arasında olan sipariş listesi
+select * from Orders where EmployeeID between 3 and 5
+--
+
+use NORTHWND
+select * from Orders
+select * from Orders where EmployeeID=3 and ShipVia=2 --3 nolu çalışan ve 2 nolu kargo
+-- 3 nolu çalışan veya 2 nolu kargo olanlatın sipariş listesi
+select * from orders where EmployeeID=3 or ShipVia=2
+-- companyname i "co" ile başlayan ve city sao paulo olan müşteri listesi
+select * from customers where city='Sao Paulo' and CompanyName like 'co%'
+--SIRALAMA:
+select * from customers order by City asc --"asc" a dan z ye, ascending anlamında
+select * from Customers order by city desc --"desc" z den a ya, descending anlamında
+-- germany den olan müşterileri şehre göre zalan sırada listeleyiniz
+select * from customers where country='germany' order by city desc
+-- germany den olan müşterileri şehre göre zalan sırada ve companyname e göre listeleyiniz
+--ilk sıralamayı şehre göre yapıyor, aynı şehirde olanlar için sonraki sıralama kriteri companyname
+select * from customers where country='germany' order by city desc, CompanyName 
+--ürünleri supplierid ye göre azaln sırada listeleme
+select * from Products order by SupplierID desc
+--ürünleri unitsinstock a göre azalan ve categoryid ye göre artan sırada listeleyiniz
+select * from Products order by UnitsInStock desc, CategoryID
+--productname alanı "q" ile başlayan ürünleri productid ye göre azalan sırada sıralayınız
+select * from Products where productname like 'q%' order by ProductID desc
+--
+
+--yeni bir veri tabanı oluşturduk
+create database ertevmarket
+use ertevmarket
+-- tablolar oluşturma //create table "tabloismi" (column1 datatype, column2 datatype, ...)
+create table musteriler (musteri_id int, kimlik_no varchar(11), isim varchar(20), soyisim varchar(20))
+create table urunler (urunler_id int, urun_ismi varchar(30), fiyat smallmoney, adet smallint)
+create table siparisler (siparis_id int, urunler_id int, siparis_adedi smallint, teslimat_adresi varchar(200),
+musteri_id int)
+-- CONSTRAINTS / kısıtlayıcılar
+-- "not null" boş bırakılamaz, "unique" eşsiz yani tek bir adet, "primary key" tablolarda ilişki kurulacak alan 
+-- foreign key tablolar arası ilişki için gerekli
+create table musteriler (musteri_id int primary key, 
+kimlik_no varchar(11) not null unique, 
+isim varchar(20) not null, 
+soyisim varchar(20) not null)
+create table urunler (urun_id int primary key, 
+urun_ismi varchar(30) not null, 
+fiyat smallmoney not null, 
+adet smallint not null)
+create table siparisler (siparis_id int primary key, 
+urun_id int not null foreign key references urunler(urun_id), 
+siparis_adedi smallint not null, 
+teslimat_adresi varchar(200) not null,
+musteri_id int not null foreign key references musteriler(musteri_id))
+--check kontrol etmek için kullanılır / default boş bırakılan yeri verilen değer ile doldurma
+create table musteriler (musteri_id int primary key, 
+kimlik_no varchar(11) not null unique, 
+isim varchar(20) not null default 'müşteri', 
+soyisim varchar(20) not null,
+yas smallint check (yas>=18))
+create table urunler (urun_id int primary key, 
+urun_ismi varchar(30) not null, 
+fiyat smallmoney not null, 
+adet smallint not null check(adet!=0))
+create table siparisler (siparis_id int primary key, 
+urun_id int not null foreign key references urunler(urun_id), 
+siparis_adedi smallint not null, 
+teslimat_adresi varchar(200) not null,
+musteri_id int not null foreign key references musteriler(musteri_id))
+--"auto increament" mysql için. "identity" sql için ve başlayıp teker teker artırmak için otomatik doldurma
+create table musteriler (musteri_id int primary key identity(1,1), 
+kimlik_no varchar(11) not null unique, 
+isim varchar(20) not null default 'müşteri', 
+soyisim varchar(20) not null,
+yas smallint check (yas>=18))
+create table urunler (urun_id int primary key, 
+urun_ismi varchar(30) not null, 
+fiyat smallmoney not null, 
+adet smallint not null check(adet!=0))
+create table siparisler (siparis_id int primary key, 
+urun_id int not null foreign key references urunler(urun_id), 
+siparis_adedi smallint not null, 
+teslimat_adresi varchar(200) not null,
+musteri_id int not null foreign key references musteriler(musteri_id))
+--
+
+create database ertevsinema
+use ertevsinema
+create table Turler (Tur_id int, Ad varchar(20))
+create table Artistler (Artist_id int, Ad varchar(20), Soyad varchar(20))
+create table Artist_Sinema (Artist_id int, Sinema_id int)
+create table Sinema_Tur (Tur_id int, Sinema_id int)
+create table Sinema (Sinema_id int, Ad varchar(20), Tarih date, IMDB_puan float(2) )
+--
+
+create database ertevkutuphane
+use ertevkutuphane
+create table tur (turno int primary key identity (1,1), 
+ad varchar(50) not null default 'macera') 
+create table yazar (yazarno int primary key identity (1,1), ad varchar(20) not null, soyad varchar(20) not null)
+create table ogrenci (ogrno int primary key identity (1,1), ad varchar(20) not null, soyad varchar(20) not null, 
+dtarih date, cinsiyet varchar(5) not null, sinif varchar(20) not null,
+puan tinyint not null check(puan>=0 and puan<=100))
+create table kitap (kitapno int primary key identity (1,1), ad varchar(50) not null, sayfasayisi smallint default '100',
+puan tinyint not null check(puan>=0 and puan<=100), yazarno int foreign key references yazar(yazarno),
+turno int foreign key references tur(turno))
+create table islem (islemno int primary key identity (1,1), ogrno int foreign key references ogrenci(ogrno),
+kitanpno int foreign key references kitap(kitapno),atarih date not null, vtarih date not null)
+--
