@@ -1,0 +1,109 @@
+use NORTHWND
+
+select Cu.CompanyName, Cu.ContactName, ord.OrderDate from Customers cu, Orders ord where cu.CustomerID=ord.CustomerID
+--from da customers a cu orders a ord nickleri verdik ki tekrar uzun uzun yazılmasın diye
+
+--İkinci yöntem : Birden fazla tablodan veri listeleme (inner join)
+select Customers.CompanyName, Customers.ContactName, orders.OrderDate from Customers inner join Orders on Customers.CustomerID=Orders.CustomerID
+
+select * from Orders
+select * from [Order Details] --boşluk olduğu için köşeli parantez
+select * from Products
+
+--sipariş tarihi 1997 yılının ilk üç ayı olan siparişlerin sipariş tarihi, birim fiyatını ve ürünün adı listesini listeleyen sql
+--1
+select Orders.OrderDate,[Order Details].UnitPrice, Products.ProductName from Orders, [Order Details], Products
+where Orders.OrderID=[Order Details].OrderID and [Order Details].ProductID=Products.ProductID 
+and Orders.OrderDate>='01.01.1997' and Orders.OrderDate<'04.01.1997'
+--2
+select Orders.OrderDate,[Order Details].UnitPrice, Products.ProductName from Orders, [Order Details], Products
+where Orders.OrderID=[Order Details].OrderID and [Order Details].ProductID=Products.ProductID 
+and Orders.OrderDate between '01.01.1997' and '03.31.1997'
+--3
+select Orders.OrderDate,[Order Details].UnitPrice, Products.ProductName 
+from Orders inner join [Order Details] on Orders.OrderID=[Order Details].OrderID
+inner join Products on [Order Details].ProductID=Products.ProductID 
+and Orders.OrderDate between '01.01.1997' and '03.31.1997'
+--
+
+use ertevkurs
+select * from ogrenci
+insert into ogrenci values ('15975365482','İbrahim Efe','İnce','Erkek','11.06.2004','ibrahim@gmail.com','0(535)1234567')
+
+--kayıt silme (delete)
+--delete from ogrenci (tablodaki tüm veriyi siler)
+delete from ogrenci where tcno='15975365482'--şarta uyan kayıtlar silinir / primary key kullanılmalı çünkü unique
+select * from ogrenciders
+--ilişkili olan tablolar varsa silme işleminde uyarı veriyor
+
+--Tablo silme
+drop table ogrenci --hata / ilişkili tablo var 
+drop table ders --hata
+drop table ogrenciders --ilişki varsa önce bağımlı tabloyu silmek gerekir
+drop table ogrenci
+
+insert into ogretmen values ('98765432581','Deniz','Çatmalı','d@gmail.com','05056543210','Yazılım')
+select * from ogretmen
+delete from ogretmen --tablodaki tüm veriyi siler. tablo durmaya devam eder. Yeni kayıtlarda oto. artan kaldığı yerden devam eder!
+truncate table ogretmen --tablodaki tüm veriyi siler. tablo durmaya devam eder. Yeni kayıtlarda 0'dan başlar
+--
+
+--ALTER TABLE
+--Var olan bir tabloun yapısını değiştirmek için kullanılır.
+--tabloya sonradan alan ekleme, var olan alanı silme yada değiştirme
+select * from ogretmen
+
+--1 Alan ekleme
+alter table ogretmen add adres varchar (50) not null default 'Adres bilgisi yok'
+
+--2 Alan silme
+alter table ogretmen drop column adres --hata verdi. büyük ihtimalle not null yaptığımız veya veri olduğu için
+
+--3 Alan güncelleme
+alter table ogretmen alter column adres nvarchar(100) --hata verdi. büyük ihtimalle not null yaptığımız veya veri olduğu için
+
+select * from ders
+alter table ders add aciklama varchar(50)
+alter table ders alter column aciklama varchar(100)
+alter table ders drop column aciklama
+--alter table veri kaybı veya hatalara sebep olabilir bu sebeple çok tercih edilmemeli!
+--
+
+create database ertevhastane
+use ertevhastane
+
+create table doktor(dno int primary key identity,dadi nvarchar(30),unvan nvarchar(20),brans nvarchar(20))
+
+create table hasta(hno int primary key identity,hadi nvarchar(30),Adres nvarchar(50))
+
+create table doktorhasta(numara int primary key identity,dokid int foreign key references doktor(dno),
+hid int foreign key references hasta(hno),muayeneyeri varchar(20),zaman date,saat tinyint)
+
+insert into hasta values ('Ali Can','Nilüfer, Bursa')
+insert into hasta values ('Veli Can','Nilüfer, Bursa')
+insert into hasta values ('Ahmet Dal','Osmangazi, Bursa')
+insert into hasta values ('Ayşe Korkmaz','İstanbul')
+insert into hasta values ('Elif Durmaz','Kestel, Bursa')
+select * from hasta
+insert into doktor values ('Can Kurtaran','Uzman Hekim','Dahiliye')
+insert into doktor values ('Ayşe Can','Uzman Hekim','Kadın Doğum')
+insert into doktor values ('Burak Kut','Hekim','Dahiliye')
+insert into doktor values ('Ali Duymaz','Uzman Hekim','Kulak-Burun-Boğaz')
+insert into doktor values ('Samih Kalp','Intern','Dahiliye')
+select * from doktor
+insert into doktorhasta values (1,1,'Lab5','08.03.2023',9)
+insert into doktorhasta values (2,4,'Doğumhane','10.03.2023',10)
+insert into doktorhasta values (3,5,'Salon2','03.22.2023',11)
+insert into doktorhasta values (4,3,'Salon5','12.03.2023',9)
+insert into doktorhasta values (5,2,'Salon9','08.03.2023',15)
+select * from doktorhasta
+
+--1 doktor tablosuna cinsiyet alanı ekleme varchar10
+--2 doktorhasta tablosunda zaman ve saat alanlarını birleştiren
+--3 hasta tablosu tckimlik alanı ekleyen
+
+alter table doktor add cinsiyet varchar(10) --1
+alter table hasta add tckimlik nvarchar(11) --3
+alter table doktorhasta alter column zaman datetime --2
+alter table doktorhasta drop column saat --2
+--
