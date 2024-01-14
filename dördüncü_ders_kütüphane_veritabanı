@@ -1,0 +1,139 @@
+create database KUTUPHANE
+use KUTUPHANE
+create table Reyon(RafReyon_No int primary key, Reyon_Adi nvarchar(50) not null)
+create table Kategori(Kategori_No int, Kategori_adi nvarchar(30) not null, primary key (Kategori_no))
+create table Yazar(Yazar_No int primary key identity, Yazar_Ad nvarchar(50) not null, Yazar_Soyad nvarchar(50) not null)
+create table Yayinevi(Yayinevi_no int primary key, Yayinevi_Adi nvarchar(80) not null)
+create table Personel(Per_Tc nvarchar(11) primary key, P_Adi nvarchar(30) not null, P_Soyadi nvarchar(30) not null, P_adres nvarchar(80) not null, P_Tel nvarchar(11), P_Email nvarchar(80), P_Dogtar date)
+create table Uyeler(Uye_Tc nvarchar(11) primary key, U_Adi nvarchar(30) not null, U_Soyadi nvarchar(30) not null, U_adres nvarchar(80) not null, U_Tel nvarchar(11), U_Email nvarchar(80), U_Dogtar date, U_Meslek nvarchar(30))
+create table Kitap(
+K_BarkodNo nvarchar(10) primary key, 
+K_Adi nvarchar(50) not null, 
+Reyon_id int not null, 
+Kategori_id int not null, 
+Yazar_id int not null, 
+Yayinevi_id int not null, 
+Basim_yili int not null, 
+Sayfa_sayisi int not null,
+constraint fk_Kitap_Reyon foreign key (Reyon_id) references Reyon(RafReyon_No) on update cascade on delete cascade,
+constraint fk_Kitap_Kategori foreign key (Kategori_id) references Kategori(Kategori_No) on update cascade on delete cascade,
+constraint fk_Kitap_Yazar foreign key (Yazar_id) references Yazar(Yazar_No) on update cascade on delete cascade,
+constraint fk_Kitap_Yayinevi foreign key (Yayinevi_id) references Yayinevi(Yayinevi_No) on update cascade on delete cascade)
+--on update cascade ==> güncellemelere izin ver demek. Aynı şekilde on delete cascade bu kısmın silinmesine izin ver demek.
+create table Islem(
+Islem_No int primary key identity(1,1),
+Uye_id nvarchar(11) not null, 
+Per_id nvarchar(11) not null,
+Kitap_id nvarchar(10) not null,
+A_Tarihi date not null,
+V_Tarihi date,
+constraint fk_Islem_Uye foreign key (Uye_id) references Uyeler(Uye_Tc) on update cascade on delete cascade,
+constraint fk_Islem_Personel foreign key (Per_id) references Personel(Per_Tc) on update cascade on delete cascade,
+constraint fk_Islem_Kitap foreign key (Kitap_id) references Kitap(K_BarkodNo) on update cascade on delete cascade)
+
+--SORGULAR
+--1
+select*from Kitap
+--2
+select K_Adi as 'Kitap Adı', Reyon_Adi as ReyonAdı, Kategori_Adi as KategoriAdı, Yazar_Ad as YazarAdı, Yazar_Soyad as YazarSoyadı,Yayinevi_Adi as Yayınevi 
+from Kitap, Reyon, Kategori,Yazar,Yayinevi where reyon.RafReyon_No=Kitap.Reyon_id and Kategori.Kategori_No=Kitap.Kategori_id and yazar.Yazar_No=Kitap.Yazar_id 
+and Yayinevi.Yayinevi_no=Kitap.Yayinevi_id
+--3 epsilon yayınevine ait kitapların listesi
+select*,Yayinevi_Adi as YayınEvi from Kitap, Yayinevi where Kitap.Yayinevi_id=Yayinevi.Yayinevi_no and Yayinevi.Yayinevi_Adi='Epsilon'
+--4 Bursalı üyelerin almış olduğu kitap adlarını listeleyin
+select U_Adi as ÜyeAdı, U_Soyadi as ÜyeSoyadı, U_adres as Adres,K_Adi as KitapAdı from Uyeler,Kitap,Islem where U_Adres='Bursa' 
+and Islem.Kitap_id=Kitap.K_BarkodNo and Islem.Uye_id=Uyeler.Uye_Tc
+--5 Birşey kategorisinde kitapların hangi personel tarafından verildiğini yazdıran sorgu
+select P_Adi as PersonelAdı,P_Soyadi as PersonelSoyadı, K_Adi as KitapAdı,Kategori_adi as KategoriAdı from Personel,Kitap,Kategori,Islem where Kategori_adi='birşey'
+and Personel.Per_Tc=Islem.Per_id and Kitap.Kategori_id=Kategori.Kategori_No and Islem.Kitap_id=Kitap.K_BarkodNo
+
+--UPDATE - GÜNCELLEME
+update Kategori set Kategori_No=113 where Kategori_No=103 --tekil güncelleme yani tek bir tabloda
+alter table Personel add Maas int --daha önce veri olduğu için not null olarak ekleme yapamıyoruz
+alter table Personel alter column Maas int not null --önce ekledik, sonra manuel veri girişi ve güncelleme
+--Soru: Personel maaşına %14 zam yapan sorgu
+update Personel set Maas=Maas*1.14 
+--Soru: Adında a harfi olan Bursalı üyelerin listesi
+select * from Uyeler where U_adres='Bursa' and  U_Adi LIKE '%a%'
+
+--KÜMELEME FONKSİYONLAR
+select avg(Maas) as OrtalamaMaas from Calisan --ortalama değer döndürür 
+select max(Yas) as EnYüksekYaş from Calisan --en yüksek değer
+--En yüksek yaşa sahip çalışan kim?
+select Per_Adi, Per_Soyadi from Calisan where yas=(select max(Yas) as EnYüksekYaş from Calisan)
+select min(Maas) as EnDüşükMaaş from Calisan --en düşük değer
+select Per_Adi, Per_Soyadi from Calisan where maas=(select min(Maas) as EnDüşükMaaş from Calisan)
+select sum(maas) as ToplamMaaş from Calisan --toplam
+select count(*) as KişiSayısı  from Calisan --sayma / null olanlarıda sayar
+select count(Ulke) as ÜlkeSayısı from Calisan --sadece dolu olanları sayar
+
+--GROUP BY İŞLEMLERİ
+--Kaç farklı ülkeden Çalışan var?
+select Ulke from Calisan group by Ulke order by Ulke desc --desc demez isek group by kendi a-z ye göre sıralıyor
+select distinct Ulke from Calisan --group by ile aynı işlev. Sütundaki farklı değerleri listeler
+--her bir ülkede çalışan personel sayısını veren sorgu
+select ulke, count(*) as PersonelSayısı from Calisan group by ulke
+--kaç farklı ülke ve şehirden çalışan var?
+select ulke as Ülkeler,sehir as Şehirler from Calisan group by ulke, sehir
+--çalışan bay ve bayan sayısı
+select cinsiyet, count(*) as Sayı from Calisan group by cinsiyet	
+--bay ve bayanların yaş ortalaması kaçtır.
+select cinsiyet,avg(Yas) as OrtalamaYaş from Calisan group by cinsiyet 
+--Maaşı 35 binden büyük olan her bir ülkedeki çalışan bay ve bayanların yaş ortalaması ve çalışan sayısı
+Select Ulke as Ülkeler, Cinsiyet, avg(yas) as OrtalamaYaş, count(*) as ÇalışanSayısı from Calisan where maas>=35000 group by Ulke,Cinsiyet
+--Maaş ortalaması 35000 üzerinde olan her bir şehirdeki personelin yaş ortalaması kaçtır?
+select sehir,avg(yas) as YaşOrtalaması from Calisan group by sehir having avg(Maas)>35000
+--Erkek çalışan sayısı 1 den fazla olan ülkelerin maaş ortalaması
+select ulke, avg(maas) as MaaşOrtalaması from Calisan where cinsiyet=1 group by ulke having count(*)>1 
+--Yaş ortalaması 23ün üzerinde olan Türkiyede çalışan bay ve bayanların maaş ortalaması kaçtır?
+select cinsiyet, avg(maas) as MaaşOrtalaması from Calisan where Ulke='Türkiye' group by cinsiyet having avg(yas)>23 order by cinsiyet desc
+
+create table Orders(orderId int, price int)
+select orderId, sum(price) as prices from Orders having sum(price)>=1000 order by sum(price) desc
+--
+
+--Matematiksel Fonksiyonlar
+select abs(-5) as MutlakDeğer --negatif sayının mutlak değeri
+select power(5,2) as KuvvetAlma --kuvvetini alma
+select sqrt(16) as KareköküAlma --karekökü alma
+select round(2.55,0) as Yuvarlama --basamak sayısı kadar yuvarlama
+select round(2.16,1) --ikinci rakam noktadan sonraki basamak sayısı için
+select floor(2.99) --aşağı yuvarlama
+select ceiling(3.001) --yukarı yuvarlama
+--String Fonksiyonlar
+select lower('ERTEV') --küçük karaktere çevirme
+select upper('ertev') --büyük karaktere çevirme
+select len('Ertev') --karakter sayısı uzunluğunu belirtir
+select reverse('ertev') --karakterleri ters çevirir
+select replace('ertev','e','a') --metinsel ifadede e görülen yere a harfi koy
+select substring('ertev',1,2) --1. karakterden başlayarak 2 karakter al. ilk rakam hangi karakterden başlayacağını, ikinci rakam ise kaç karakter alınacağını belirtir
+select left('Ertev',3) --belirtilen karakterin soldan 3 karakterini al. rakam soldan itibaren alınması gereken karakter sayısı
+select right('Ertev',2) --belirtilen karakterin sağdan 2 karakterini al. rakam sağdan itibaren alınması gereken karakter sayısı
+select trim('  Ertev ') --trim baştaki ve sondaki boşlukları siler. 
+select rtrim('  Ertev ') --sağdan trim yapar
+select ltrim('  Ertev ') --soldan trim yapar
+select 'Emir'+space(1)+'Cihan'+space(1)+'ALPER' --space araya belirtilen rakam kadar boşluk bırakır
+select replicate ('ertev', 3) --belirtilen rakam kadar tekrar eder
+select str(6) --rakamları string tipine dönüştürür
+-- DENEME--üyeler tablosundan üye adının ve soyadının ilk harfi ve son harfini alsın ve araya * bassın
+select upper(substring(U_Adi,1,1)) + '*****'+ upper(right(U_adi,1)) as GizliÜyeAdı, upper(substring(U_soyadi,1,1)) + '*****'+ upper(right(U_soyadi,1)) as GizliÜyeSoyadı from Uyeler
+select upper(substring(U_Adi,1,1)) + '*****'+ upper(substring(U_Adi,len(U_adi),1)) as GizliÜyeAdı, upper(substring(U_soyadi,1,1)) + '*****'+ upper(substring(U_soyadi,len(U_soyadi),1)) as GizliÜyeAdı from Uyeler
+--Tarih - Zaman Fonksiyonları
+select getdate() as ŞimdikiZaman --O andaki zamanı verir
+select year(getdate()) as ŞuankiYıl --sadece yılı verir
+select month('1991.05.30') as MustafanınDoğumAyı --sadece ay bilgisini verir
+select day(getdate())as ŞuankiGün --sadece gün bilgisini verir
+select dateadd(day,10,getdate()) as EklenmişGün --tarih ekleme, ilk satır gün,ay,yıl belirtilir ve eklenecek zaman rakamsal belirtilir ve eklenilecek tarih yazılır
+select dateadd(quarter,2,getdate()) --iki çeyrek zaman dilimi yani 3*2=6 ay ekler
+select datediff(day,'11.02.1998',getdate()) as YusufKaçGünlük --tarih farkı. ilk değer hesaplanacak tarih cinsi(gün,ay veya yıl) ikinci değer çıkarılacak tarih, ve üçüncü değer çıkartılacak tarih
+--DENEME--üyelerin adını, soyadını ve yaşını yazdıran sordu
+select u_adi as ÜyeAdı, U_Soyadi as ÜyeSoyadı, datediff(year,U_Dogtar,GETDATE()) as Yaş from Uyeler
+select datepart(month,getdate()) --tarih bilgisi almak için parçalara bölme.
+select datepart(quarter,getdate()) --içinde bulunduğumuz çeyreği alır.
+--DENEME--Doğum günü olan üyeleri bul
+select U_adi as ÜyeAdı, U_Soyadi as ÜyeSoyadı from Uyeler where datepart(day,getdate())=datepart(day,u_dogtar) and datepart(month,getdate())=datepart(month,u_dogtar)
+select U_adi as ÜyeAdı, U_Soyadi as ÜyeSoyadı from Uyeler where month(u_dogtar)=month(getdate()) and day(u_dogtar)=day(getdate())
+--karakter uzunluğu kadar * 
+select upper(substring(U_Adi,1,1)) +replicate ('*', (len(u_adi)-2)) + upper(right(U_adi,1)) as GizliÜyeAdı, 
+upper(substring(U_soyadi,1,1)) + replicate ('*', (len(u_adi)-2))+ upper(right(U_soyadi,1)) as GizliÜyeSoyadı from Uyeler
+--
