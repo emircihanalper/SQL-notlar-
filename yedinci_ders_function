@@ -1,0 +1,181 @@
+--Function Uygulaması
+use KUTUPHANE
+create function	kayitsay()
+returns int 
+as
+begin
+	declare @ks int
+	set @ks=(select count(*) from Uyeler)
+	return @ks
+end
+
+select dbo.kayitsay() as UyeSayısı
+
+--örnek: ad soyad bilgilerini alarak bunları birleştiren fonksiyon
+create function adSoyadBirlestir(@Ad nvarchar(30),@Soyad nvarchar(30))
+returns nvarchar(60)
+as
+begin 	
+	return @Ad+space(1)+@Soyad
+end
+
+select dbo.adSoyadBirlestir('Deniz','Çatmalı') as AdSoyad
+
+select dbo.adSoyadBirlestir(Personel.P_Adi, Personel.P_Soyadi) as PersonelAdSoyad from Personel
+
+--örnek: klavyeden doğum tarihini alarak yaş hesaplayan fonksiyon
+create function yashesapla(@dtarih date)
+returns int
+as
+begin	
+	return year(getdate())-year(@dtarih)
+	--returns datediff(year,@dtarih,getdate())
+end
+
+select dbo.yashesapla('1987.02.27') as Yaşınız
+
+select *,dbo.yashesapla(Personel.P_Dogtar) as PersonelYaşları from Personel
+
+--Uye işlemi
+create function UyeListe_()
+returns table
+as
+return select Uye_Tc,U_Adi,U_Soyadi from Uyeler
+
+select * from dbo.UyeListe_() 
+
+--Üye arama işlemini fonksiyon ile gerçekleştirelim
+create function uyeara(@TCno nvarchar(11))
+returns table
+as
+return select * from Uyeler where Uyeler.Uye_Tc=@TCno
+
+select * from dbo.uyeara(7852)
+
+--View Nesneleri
+create view UyeBursa
+as
+select U_Adi,U_Soyadi,U_Adres from Uyeler where U_adres='Bursa'
+
+select * from UyeBursa
+
+--örnek: hangi üyenin hangi kategoride hangi kitabı aldığını veren view
+create view uyekitaplistele
+as
+select U_Adi,U_Soyadi,Kategori_adi,K_Adi from Uyeler,Islem,Kategori,Kitap where Uye_id=Uye_Tc and Kitap_id=K_BarkodNo  and Kategori_id=Kategori_No
+
+select * from uyekitaplistele
+
+--silmek için ==> drop view ...
+--değiştirmek için ==>
+alter view uyekitaplistele
+with encryption --değişiklik yapılmasını engelledik
+as
+select U_Adi,U_Soyadi,Kategori_adi,K_Adi from Uyeler,Islem,Kategori,Kitap where Uye_id=Uye_Tc and Kitap_id=K_BarkodNo  and Kategori_id=Kategori_No
+
+--Trigger Tetikleyiciler
+create database deneme
+use deneme
+
+create table Urunler(
+Urun_No int primary key,
+Urun_Adi nvarchar(30) not null,
+Stok_adet int not null,
+fiyat money not null)
+
+create table Siparis(
+Siparis_No int primary key identity(1,1),
+Urun_id int not null,
+Adet int not null,
+Toplam_Tutar money not null,
+Sip_Tarihi date not null,
+constraint fk_siparis_urun foreign key(Urun_id) references Urunler(Urun_No) on delete cascade on update cascade)
+
+create trigger StokGuncelle
+on Siparis
+after insert --"for insert" de olabilir
+as 
+begin
+	declare @Urunno int, @tadet int
+	select @Urunno=Urun_id,
+	@tadet=Adet from inserted
+	update Urunler set Stok_adet=Stok_adet-@tadet
+	where Urun_No=@Urunno
+end
+
+create trigger StokAdetGuncelle
+on Siparis
+after update
+as begin
+	declare @yadet int, @eadet int, @urunno int
+	select @eadet=Adet, @urunno=Urun_id from deleted
+	select @yadet=Adet from inserted
+	update Urunler set Stok_adet=(Stok_adet+@eadet)-@yadet where Urun_No=@urunno
+end
+
+create trigger Siparisiptal
+on Siparis
+after delete
+as
+begin
+	declare @Urunnoipt int, @iadet int
+	select @Urunnoipt=Urun_id,
+	@iadet=Adet from inserted
+	update Urunler set Stok_adet=Stok_adet+@iadet
+	where Urun_No=@Urunnoipt
+end
+
+create trigger SilmeEngelleme
+on Urunler
+after delete
+as begin
+rollback
+print 'Silme Engellendi'
+end
+
+delete from Urunler where Urun_No=100
+--------------------
+
+create table Kitap(
+KitapNo int primary key,
+Kitap_Adi nvarchar(30) not null)
+
+create table Arsiv(
+Sira_No int primary key identity(1,1),
+Kitapid int, 
+K_Adi nvarchar(30),
+Tarihi date)
+
+create trigger ArsivTasi
+on Kitap
+after delete
+as begin
+	insert into Arsiv
+	select *,GETDATE() from deleted
+end
+
+--Örnek:Öğrenci şube tablosun eklenen her öğrenci otomatikman Şube Sayısı tablosuna eklenecek.
+
+create table Ogrenci(
+ogrno int primary key not null,
+ograd nvarchar(30) not null,
+ogrsoyad nvarchar(30) not null,
+sube nvarchar(5) not null)
+
+create table SubeSay(
+sno int primary key identity(1,1),
+sube_no nvarchar(5) not null,
+sayi int not null)
+
+create trigger SubeOlustur
+on Ogrenci
+after insert 
+as begin
+	declare @Sube_ nvarchar(5)
+	select @Sube_=sube from inserted
+	if exists (select * from SubeSay where sube_no=@Sube_)
+		update SubeSay set sayi=sayi+1 where sube_no=@Sube_
+	else
+		insert into SubeSay values(@Sube_,1)	
+end
+
