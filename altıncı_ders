@@ -1,0 +1,156 @@
+use KUTUPHANE
+create procedure UyeListe as
+begin
+	select * from Uyeler
+end --procedure oluşturma
+execute UyeListe --procedure çağırma
+exec UyeListe --procedure çağırma farklı yöntem
+UyeListe --procedure çağırma farklı yöntem sadece ismini yazarak
+-----------------------------
+create proc Islem_Veri as
+begin
+	select u_adi, u_soyadi, K_adi, P_adi, P_soyadi from Uyeler, Kitap, Personel, Islem 
+	where Uyeler.Uye_Tc=Islem.Uye_id and Islem.Kitap_id=Kitap.K_BarkodNo and Islem.Per_id=Personel.Per_Tc
+end
+exec Islem_Veri
+------------------------
+create proc KitapAra
+@KBNo int
+as
+begin
+	select * from Kitap where K_BarkodNo=@KBNo
+end
+
+declare @deger int=113
+exec KitapAra @deger
+--tablo üzerinden, Programmability>>Stored Procedures içinden sağ tık ve modify ile güncelleme yaptık. Aşağıdaki kodu ekledik
+/*
+begin
+if exists (select*from Kitap where K_BarkodNo=@KBNo)
+	select * from Kitap where K_BarkodNo=@KBNo
+else 
+	print 'Aradığınız Kayıt Bulunamadı'
+end
+*/
+-----------------------
+--Soru: Roman alanında Ahmet Ümit'e ait Can Yayınlarından "Bir Aşk Masalı" kitabını ekleyen procedure
+create proc KitapEkle
+@pKBNo int, @pKAdi nvarchar(50),@pReyNo int, @pKatAdi nvarchar(30), @pYAd nvarchar(30), @pYSad nvarchar(30), @pYayAdi nvarchar(50), @pbasyil int, @pSayfa int as
+begin
+	declare @KatNo int, @YazarNo int, @YayNo int
+	set @KatNo=(select Kategori_No from Kategori where Kategori_adi=@pKatAdi)
+	set @YazarNo=(select yazar_no from Yazar where Yazar_Ad=@pYAd and Yazar_Soyad=@pYSad)
+	set @YayNo=(select yayinevi_no from Yayinevi where Yayinevi_Adi=@pYayAdi)
+	insert into Kitap values(@pKBNo,@pKAdi,@pReyNo,@KatNo,@YazarNo,@YayNo,@pbasyil,@pSayfa)
+	exec KitapListele --modify ile eklendi
+end
+exec KitapEkle 115,'Bir Aşk Masalı',13,'Roman','Ahmet','Ümit','Can',1998,475
+
+create proc KitapListele as
+begin
+	select* from Kitap
+end
+
+exec KitapEkle 116,'Bir Ömür Nasıl Yaşanır',14,'birşey','İlber','Ortaylı','Alfa',2023,350
+------------------------------
+create proc Kategori_Sil 
+@pKatNo int as
+begin
+	if exists (select * from Kategori where Kategori_No=@pKatNo)
+		begin
+			delete from Kategori where Kategori_No=@pKatNo
+			select * from Kategori
+		end
+	else
+		print 'Silmek istediğiniz kayıt bulunamadı'
+end
+
+exec Kategori_Sil 107
+--------------------------------
+--soru:Ahmet Ümit isimli yazara ait yazar no 10 olarak güncelleyen procedure
+--identity özelliklerinde güncelleme yapılamıyor. Identity özelliği sağ tık design tablosundan kaldırıldı
+create proc YazarGuncelle
+@pYazNo int, @pYazAd nvarchar(30), @pYazSoyad nvarchar(30) as 
+begin
+	if exists (select * from Yazar where Yazar_Ad=@pYazAd and Yazar_Soyad=@pYazSoyad)
+		begin
+			update Yazar set Yazar_No=@pYazNo where Yazar_Ad=@pYazAd and Yazar_Soyad=@pYazSoyad
+			select * from Yazar
+		end
+	else
+	print 'Güncellenemedi'
+end
+
+exec yazarguncelle 10,'Ahmet','Ümit'
+----------------------------
+--soru: adında E harfi olan Bursalı üyelerin okuduğu kitap listesi, 
+create proc UyeArama
+@pHarf nvarchar(1), @pSehir nvarchar(20) as
+begin
+	if exists (select * from Uyeler where U_adres=@pSehir and U_adi like '%'+@pHarf+'%')
+	select K_adi,U_Adi,U_Soyadi from Kitap,Uyeler,Islem where Kitap.K_BarkodNo=Islem.Kitap_id and Uyeler.Uye_Tc=Islem.Uye_id and U_adres=@pSehir and U_adi like '%'+@pHarf+'%'
+	else
+	print 'Sonuç yok'
+end
+/* Modify ile değiştirilen kısım:
+begin
+	if exists (select * from Uyeler where U_adres=@pSehir and U_adi like '%'+@pHarf+'%')
+	begin
+	if exists(select K_adi,U_Adi,U_Soyadi from Kitap,Uyeler,Islem where Kitap.K_BarkodNo=Islem.Kitap_id and Uyeler.Uye_Tc=Islem.Uye_id and U_adres=@pSehir and U_adi like '%'+@pHarf+'%')
+		select K_adi,U_Adi,U_Soyadi from Kitap,Uyeler,Islem where Kitap.K_BarkodNo=Islem.Kitap_id and Uyeler.Uye_Tc=Islem.Uye_id and U_adres=@pSehir and U_adi like '%'+@pHarf+'%'
+	else
+		print 'Üye var, Kitap Almamıştır'
+	end
+	else
+	print 'Sonuç yok'
+end
+
+*/
+exec UyeArama 'e','bursa' --kayıt ve kitap var
+exec UyeArama 'ö','istanbul' --kayıt yok
+exec UyeArama 'o','istanbul' --kayıt var, kitap yok
+------------------------------
+drop procedure UyeArama --procedure silme
+-----------------------------
+--Geriye değer döndüren procedure
+--soru: parametre olarak girilen 2 sayının toplam sonucunu geriye değer olarak döndüren procedure
+create proc SayiTopla
+@ps1 int, @ps2 int, @ptoplam int output as
+begin
+	set @ptoplam = @ps1+@ps2
+end
+
+declare @sonuc int
+exec SayiTopla 10,20,@sonuc output
+select @sonuc as Sonuç
+
+declare @sonuc1 int
+exec SayiTopla 10,20,@sonuc1 output
+print @sonuc1
+------------------------
+--soru: karenin bir kenar uzunluğunu parameter olarak alıp alanını math fonksiyonu ile hesaplayarak sonucu geri döndüren procedure
+create proc kareninalani
+@pkenar int, @palan int output as
+begin
+	set @palan = SQUARE(@pkenar)
+end
+
+declare @sonuc int 
+exec kareninalani 5,@sonuc output
+print @sonuc
+--soru: vize ve final notlarını klavyeden alarak vizenin 40% ve finalin 60% alarak ortalama alan ve ortalamanın 60 üzeri ve final 50 üzeri ise geçti-kaldı sonucu veren procedure
+create proc OrtHesapla
+@pvize float, @pfinal float, @pdurum nvarchar(30) output as
+begin
+	declare @port float
+	set @port = @pvize*0.4 + @pfinal*0.6
+	if @pfinal>=50 and @port>=60
+		set @pdurum='Geçti'
+	else 
+		set @pdurum='Kaldı'
+end
+
+declare @v float=50, @f float=70
+declare @sonuc nvarchar(30)
+exec OrtHesapla @v, @f, @sonuc output
+select @sonuc as Sonuç
